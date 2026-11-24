@@ -3,6 +3,7 @@ import { fakeBrowser } from 'wxt/testing/fake-browser';
 import { handleJudge } from '@/lib/ai/chain';
 import { previewSize } from '@/lib/ai/image';
 import { parseAnswers } from '@/lib/ai/providers/generative';
+import { clefRequest } from '@/lib/ai/providers/cloudflare';
 import { jevRequest } from '@/lib/ai/providers/jev';
 import { decide, hashQuestions, MEDIA_QUESTIONS, topicQuestions } from '@/lib/ai/questions';
 import { DEFAULT_SETTINGS, parseTopics, saveKeys, saveSettings } from '@/lib/settings';
@@ -61,6 +62,19 @@ describe('JEV request', () => {
   });
 });
 
+describe('Clef request', () => {
+  it('uses the System One shape with the image as a data URL', () => {
+    const body = clefRequest(
+      { state, questions: topics, preview: { base64: 'AAAA', blob: new Blob(), width: 768, height: 576 } },
+      'clef-flash',
+    );
+    expect(body.model).toBe('clef-flash');
+    expect(body.images).toEqual(['data:image/jpeg;base64,AAAA']);
+    expect(body.questions.topic_1).toMatchObject({ type: 'noul', instructions: 'The tweet is about: football' });
+    expect(body.state).not.toHaveProperty('image');
+  });
+});
+
 describe('provider chain', () => {
   const fetchMock = vi.fn();
 
@@ -101,17 +115,24 @@ describe('provider chain', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2); // served from cache
   });
 
-  it('uses Cloudflare when it answers', async () => {
+  it('uses the chosen Clef model when Cloudflare answers', async () => {
+    await saveSettings({ ...DEFAULT_SETTINGS, providers: { ...DEFAULT_SETTINGS.providers, cloudflareModel: 'clef' } });
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({
         success: true,
-        result: { choices: [{ message: { content: '{"answers":[{"id":"topic_0","probability":0},{"id":"topic_1","probability":0.9}]}' } }] },
+        result: { model: 'clef', answers: { topic_0: { type: 'noul', noul: 0.01 }, topic_1: { type: 'noul', noul: 0.9 } } },
       })),
     );
     const response = await handleJudge(request('2'));
-    expect(response).toMatchObject({ ok: true, judgment: { provider: 'Cloudflare' } });
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
-    expect(body.response_format.type).toBe('json_schema');
+    expect(response).toEqual({ ok: true, judgment: { provider: 'Clef', probabilities: { topic_0: 0.01, topic_1: 0.9 } } });
+    expect(fetchMock.mock.calls[0]![0]).toBe('https://api.cloudflare.com/client/v4/accounts/acc/ai/run/@cf/cloudflare/clef');
+  });
+
+  it('accepts a Clef answer without the result wrapper', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ answers: { topic_0: { noul: 0.2 }, topic_1: { noul: 0.3 } } })),
+    );
+    expect(await handleJudge(request('5'))).toMatchObject({ ok: true, judgment: { provider: 'Clef Flash' } });
   });
 
   it('reports an error instead of an answer when every provider fails', async () => {

@@ -23,6 +23,21 @@ For a free local model on macOS 26+ with Apple Intelligence, run
 registers it with Chrome (`native/uninstall.sh` removes it). Without it,
 Gemini Nano built into Chrome is used if the device supports it.
 
+The settings let you pick which Apple model the helper runs:
+
+- **System** (default): the on-device model. Free, and the tweet never
+  leaves the Mac.
+- **PCC**: Apple's larger server model on Private Cloud Compute (macOS 27+).
+  It is gated by the restricted entitlement
+  `com.apple.developer.private-cloud-compute`, which Apple grants to eligible
+  developer teams. The helper built by `install.sh` is not signed with it, so
+  PCC shows as unavailable and the chain falls through to the next provider.
+  If your team has the entitlement, sign the helper with
+  `native/pcc.entitlements` and a matching provisioning profile.
+  Restricted entitlements need the profile, which in practice means wrapping
+  the helper in an `.app` bundle.
+  Then point the `path` in the host manifest at the signed binary.
+
 ## Filters
 
 1. **Languages.** Pick languages from a list, then either hide them or keep
@@ -49,9 +64,11 @@ Gemini Nano built into Chrome is used if the device supports it.
 - Works on the home feed, reply threads and search; profiles are left alone.
 - AI checks try providers in order, falling through when one is missing or
   out of quota:
-  1. a free local model: Apple Foundation Models through an optional
-     Native Messaging helper, otherwise Gemini Nano built into Chrome;
-  2. Cloudflare Workers AI;
+  1. a free local model: Apple Foundation Models (on-device, or Private
+     Cloud Compute if entitled) through an optional Native Messaging helper,
+     otherwise Gemini Nano built into Chrome;
+  2. Cloudflare Workers AI with a Clef decision model of your choice (Clef
+     Flash, Clef or Clef Omni), which answers in the same shape as JEV;
   3. JEV through its own API.
 - Keys (Cloudflare account ID and API token, JEV API key) are entered on the
   options page and kept in `chrome.storage.local`.

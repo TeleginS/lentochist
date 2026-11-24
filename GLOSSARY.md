@@ -35,13 +35,13 @@ minimum confidence, AI filters call it block threshold.
 ## Models
 
 **Provider**:
-A source of model answers for AI filters: Apple FM, Gemini Nano,
-Cloudflare Workers AI or JEV.
+A source of model answers for AI filters: Apple FM (the on-device model or
+Apple PCC), Gemini Nano, Cloudflare Workers AI (running a Clef model) or JEV.
 _Avoid_: backend, API, engine
 
 **Local provider**:
-A provider that runs on the user's machine at no cost: Apple FM or Gemini
-Nano.
+A provider reached on the user's machine at no cost: Apple FM or Gemini
+Nano. Apple PCC is reached the same way but runs on Apple's servers.
 
 **Provider chain**:
 The ordered list of providers an AI filter tries until one answers.

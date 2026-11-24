@@ -2,7 +2,7 @@ import type { Question, TweetState } from '../questions';
 import type { Probabilities } from './types';
 
 /**
- * Shared prompt for generative providers (Apple FM, Gemini Nano, Cloudflare).
+ * Shared prompt for the local generative providers (Apple FM, Gemini Nano).
  * They state a probability themselves, which is less calibrated than JEV's.
  */
 

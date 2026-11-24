@@ -33,10 +33,19 @@ export interface MediaSettings {
 
 export type ProviderId = 'local' | 'cloudflare' | 'jev';
 
+export type ClefModel = 'clef-flash' | 'clef' | 'clef-omni';
+
+/** `system`: Apple's on-device model. `pcc`: Apple's server model on Private Cloud Compute. */
+export type AppleModel = 'system' | 'pcc';
+
 export interface ProvidersSettings {
   /** The provider chain: tried in this order, disabled ones skipped. */
   order: ProviderId[];
   enabled: Record<ProviderId, boolean>;
+  /** Which Clef decision model Cloudflare Workers AI runs. */
+  cloudflareModel: ClefModel;
+  /** Which Apple Foundation Model the helper runs. */
+  appleModel: AppleModel;
 }
 
 export interface Settings {
@@ -92,6 +101,8 @@ export const DEFAULT_SETTINGS: Settings = {
   providers: {
     order: ['local', 'cloudflare', 'jev'],
     enabled: { local: true, cloudflare: true, jev: true },
+    cloudflareModel: 'clef-flash',
+    appleModel: 'system',
   },
 };
 
@@ -106,6 +117,8 @@ export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
     providers: {
       order: stored?.providers?.order ?? DEFAULT_SETTINGS.providers.order,
       enabled: { ...DEFAULT_SETTINGS.providers.enabled, ...stored?.providers?.enabled },
+      cloudflareModel: stored?.providers?.cloudflareModel ?? DEFAULT_SETTINGS.providers.cloudflareModel,
+      appleModel: stored?.providers?.appleModel ?? DEFAULT_SETTINGS.providers.appleModel,
     },
   };
 }

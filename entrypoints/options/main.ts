@@ -1,6 +1,7 @@
 import { parseKeywords } from '@/lib/keywords';
 import { languageName, nativeLanguageName } from '@/lib/languages';
-import { appleFmStatus } from '@/lib/ai/providers/apple-fm';
+import { APPLE_MODELS, appleFmStatus } from '@/lib/ai/providers/apple-fm';
+import { CLEF_MODELS } from '@/lib/ai/providers/cloudflare';
 import { nanoStatus } from '@/lib/ai/providers/nano';
 import {
   LANGUAGE_CHOICES,
@@ -10,6 +11,8 @@ import {
   parseTopics,
   saveKeys,
   saveSettings,
+  type AppleModel,
+  type ClefModel,
   type ProviderId,
   type ProviderKeys,
   type Settings,
@@ -138,7 +141,7 @@ mediaPreview.addEventListener('change', () => {
 
 const PROVIDER_NAMES: Record<ProviderId, string> = {
   local: 'Local model (Apple FM or Gemini Nano)',
-  cloudflare: 'Cloudflare Workers AI',
+  cloudflare: 'Cloudflare Workers AI (Clef)',
   jev: 'JEV',
 };
 const providersList = $('#providers-list');
@@ -183,6 +186,25 @@ for (const id of settings.providers.order) {
       typingKey = setTimeout(() => void saveKeys(keys), 400);
     });
   }
+  const modelSelect = li.querySelector<HTMLSelectElement>('[data-setting=cloudflareModel]');
+  if (modelSelect) {
+    for (const [value, label] of Object.entries(CLEF_MODELS)) modelSelect.add(new Option(label, value));
+    modelSelect.value = settings.providers.cloudflareModel;
+    modelSelect.addEventListener('change', () => {
+      settings.providers.cloudflareModel = modelSelect.value as ClefModel;
+      save();
+    });
+  }
+  const appleSelect = li.querySelector<HTMLSelectElement>('[data-setting=appleModel]');
+  if (appleSelect) {
+    for (const [value, label] of Object.entries(APPLE_MODELS)) appleSelect.add(new Option(label, value));
+    appleSelect.value = settings.providers.appleModel;
+    appleSelect.addEventListener('change', () => {
+      settings.providers.appleModel = appleSelect.value as AppleModel;
+      save();
+      void refreshLocalStatus();
+    });
+  }
   providerItems.set(id, li);
   providersList.append(li);
 }
@@ -195,11 +217,14 @@ function setStatus(name: string, ok: boolean | null, text: string): void {
 }
 
 async function refreshLocalStatus(): Promise<void> {
-  setStatus('fm', null, 'Apple FM: checking…');
-  const fm = await appleFmStatus();
-  if (fm.error) setStatus('fm', false, 'Apple FM: helper not installed');
-  else if (!fm.available) setStatus('fm', false, `Apple FM: model unavailable (${fm.reason ?? 'unknown'})`);
-  else setStatus('fm', true, `Apple FM: ready${fm.images ? ', reads images' : ', text only'}`);
+  const model = settings.providers.appleModel;
+  const name = model === 'pcc' ? 'Apple PCC' : 'Apple FM';
+  setStatus('fm', null, `${name}: checking…`);
+  const reply = await appleFmStatus();
+  const fm = reply[model];
+  if (reply.error || !fm) setStatus('fm', false, `${name}: helper not installed`);
+  else if (!fm.available) setStatus('fm', false, `${name}: unavailable (${fm.reason ?? 'unknown'})`);
+  else setStatus('fm', true, `${name}: ready${fm.images ? ', reads images' : ', text only'}`);
 
   const nano = await nanoStatus();
   const nanoImages = nano === 'available' && (await nanoStatus(true)) === 'available';

@@ -15,8 +15,8 @@ async function chain(): Promise<Provider[]> {
   const [settings, keys] = await Promise.all([loadSettings(), loadKeys()]);
   const make: Record<ProviderId, () => Provider[]> = {
     // Apple FM if its helper is installed, else Gemini Nano.
-    local: () => [appleFm(), nano()],
-    cloudflare: () => [cloudflare(keys.cloudflareAccountId, keys.cloudflareToken)],
+    local: () => [appleFm(settings.providers.appleModel), nano()],
+    cloudflare: () => [cloudflare(keys.cloudflareAccountId, keys.cloudflareToken, settings.providers.cloudflareModel)],
     jev: () => [jev(keys.jevApiKey)],
   };
   return settings.providers.order.filter((id) => settings.providers.enabled[id]).flatMap((id) => make[id]());

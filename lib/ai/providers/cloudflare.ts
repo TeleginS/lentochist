@@ -1,58 +1,67 @@
-import { ANSWER_SCHEMA, parseAnswers, SYSTEM_PROMPT, userPrompt } from './generative';
+import type { ClefModel } from '../../settings';
+import { readNouls, systemOneQuestions, systemOneState } from './system-one';
 import { Unavailable, type JudgeInput, type Probabilities, type Provider } from './types';
 
-/** Cloudflare Workers AI; text and vision in one model. */
+/**
+ * Cloudflare Workers AI with a Clef decision model. Clef speaks the same
+ * System One API as JEV: one Noul per question, probabilities trained for
+ * calibration, billed on input tokens only.
+ */
 
-const MODEL = '@cf/google/gemma-4-26b-a4b-it';
+export const CLEF_MODELS: Record<ClefModel, string> = {
+  'clef-flash': 'Clef Flash: 9B, fastest, ~6× more tweets per free day than Clef',
+  clef: 'Clef: 27B, most precise',
+  'clef-omni': 'Clef Omni: 30B MoE, also reads audio and video',
+};
 
-export function cloudflare(accountId: string, token: string): Provider {
+export function clefRequest({ state, questions, preview }: JudgeInput, model: ClefModel) {
   return {
-    label: 'Cloudflare',
-    async judge({ state, questions, preview }: JudgeInput): Promise<Probabilities> {
+    model,
+    state: systemOneState(state),
+    // Clef puts images before the state; it takes data URLs, not remote URLs.
+    ...(preview ? { images: [`data:image/jpeg;base64,${preview.base64}`] } : {}),
+    questions: systemOneQuestions(questions),
+  };
+}
+
+type ClefAnswers = Record<string, { noul?: number }>;
+
+export function cloudflare(accountId: string, token: string, model: ClefModel): Provider {
+  return {
+    label: CLEF_LABELS[model],
+    async judge(input: JudgeInput): Promise<Probabilities> {
       if (!accountId || !token) throw new Unavailable('No Cloudflare account ID or token');
 
-      const text = userPrompt(state, questions, Boolean(preview));
-      const content = preview
-        ? [
-            { type: 'text', text },
-            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${preview.base64}`, detail: 'low' } },
-          ]
-        : text;
-
       const response = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${MODEL}`,
+        `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/@cf/cloudflare/${model}`,
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [
-              { role: 'system', content: SYSTEM_PROMPT },
-              { role: 'user', content },
-            ],
-            response_format: {
-              type: 'json_schema',
-              json_schema: { name: 'judgment', schema: ANSWER_SCHEMA, strict: true },
-            },
-            chat_template_kwargs: { enable_thinking: false },
-            temperature: 0,
-          }),
+          body: JSON.stringify(clefRequest(input, model)),
         },
       );
 
       const data = (await response.json().catch(() => null)) as {
         success?: boolean;
         errors?: { code: number; message: string }[];
-        result?: { choices?: { message?: { content?: unknown } }[]; response?: unknown };
+        result?: { answers?: ClefAnswers };
+        answers?: ClefAnswers;
       } | null;
 
-      if (!response.ok || !data?.success) {
+      if (!response.ok || data?.success === false) {
         const error = data?.errors?.[0];
         // 3036: the free daily neuron allocation is used up.
         if (error?.code === 3036) throw new Unavailable('Cloudflare daily free allocation used up');
         throw new Error(`Cloudflare ${response.status}: ${error?.code ?? ''} ${error?.message ?? ''}`.trim());
       }
-      const output = data.result?.choices?.[0]?.message?.content ?? data.result?.response;
-      return parseAnswers(output, questions);
+      // The REST API usually wraps model output in `result`; accept it bare too.
+      return readNouls(data?.result?.answers ?? data?.answers, input.questions, CLEF_LABELS[model]);
     },
   };
 }
+
+const CLEF_LABELS: Record<ClefModel, string> = {
+  'clef-flash': 'Clef Flash',
+  clef: 'Clef',
+  'clef-omni': 'Clef Omni',
+};

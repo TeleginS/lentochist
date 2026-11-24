@@ -18,6 +18,7 @@ just to hide a few keys. Those keys never leave the user's own browser anyway.
   local process we accept, and the provider chain skips it when it is
   missing.
 - Provider chain: local provider (Apple FM, else Gemini Nano) → Cloudflare
-  Workers AI → JEV. Generative providers report a self-stated score, so the
-  same threshold is less reliable for them than for JEV, whose probabilities
-  are calibrated. The stub names which provider hid the tweet.
+  Workers AI (a Clef decision model) → JEV. Clef and JEV return probabilities
+  trained for calibration. The local generative models only report a score
+  they state themselves, so the same threshold is rougher for them. The stub
+  names which provider hid the tweet.

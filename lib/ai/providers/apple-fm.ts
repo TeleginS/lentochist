@@ -1,5 +1,6 @@
 import type { Browser } from 'wxt/browser';
 import { parseAnswers, SYSTEM_PROMPT, userPrompt } from './generative';
+import type { AppleModel } from '../../settings';
 import { Unavailable, type JudgeInput, type Probabilities, type Provider } from './types';
 
 /**
@@ -10,14 +11,31 @@ import { Unavailable, type JudgeInput, type Probabilities, type Provider } from 
 export const HOST_NAME = 'com.lentochist.fm';
 const TIMEOUT_MS = 30_000;
 
+export interface ModelStatus {
+  available: boolean;
+  images: boolean;
+  reason?: string;
+  /** PCC only: whether the helper is signed with the PCC entitlement. */
+  entitlement?: boolean;
+  /** PCC only: the usage quota is used up. */
+  quota?: boolean;
+}
+
 interface HelperReply {
   id: number;
   error?: string;
-  available?: boolean;
-  images?: boolean;
-  reason?: string;
+  quota?: boolean;
+  system?: ModelStatus;
+  pcc?: ModelStatus;
   answers?: unknown;
 }
+
+export const APPLE_MODELS: Record<AppleModel, string> = {
+  system: 'System: on this Mac, free, private',
+  pcc: 'PCC: Apple\'s server model on Private Cloud Compute',
+};
+
+const LABELS: Record<AppleModel, string> = { system: 'Apple FM', pcc: 'Apple PCC' };
 
 let port: Browser.runtime.Port | null = null;
 let nextId = 1;
@@ -62,33 +80,47 @@ function call(message: object): Promise<HelperReply> {
   });
 }
 
-let status: Promise<HelperReply> | null = null;
+const STATUS_TTL_MS = 60_000;
+let status: { at: number; reply: Promise<HelperReply> } | null = null;
 
-/** Whether the helper is installed and the model is ready. Cached until the helper disconnects. */
+/**
+ * Whether the helper is installed and each Apple model is ready. Rechecked
+ * every minute, since the PCC quota and Apple Intelligence state can change.
+ */
 export function appleFmStatus(): Promise<HelperReply> {
-  status ??= call({ kind: 'status' }).then((reply) => {
-    if (reply.error) status = null;
-    return reply;
-  });
-  return status;
+  if (!status || Date.now() - status.at > STATUS_TTL_MS) {
+    const reply = call({ kind: 'status' });
+    status = { at: Date.now(), reply };
+    void reply.then((r) => {
+      if (r.error) status = null;
+    });
+  }
+  return status.reply;
 }
 
-export function appleFm(): Provider {
+export function appleFm(model: AppleModel): Provider {
+  const label = LABELS[model];
   return {
-    label: 'Apple FM',
+    label,
     async judge({ state, questions, preview }: JudgeInput): Promise<Probabilities> {
-      const s = await appleFmStatus();
-      if (s.error || !s.available) throw new Unavailable(`Apple FM: ${s.error ?? s.reason ?? 'unavailable'}`);
+      const reply = await appleFmStatus();
+      const s = reply[model];
+      if (reply.error || !s?.available) throw new Unavailable(`${label}: ${reply.error ?? s?.reason ?? 'unavailable'}`);
 
       const image = preview && s.images ? preview.base64 : undefined;
-      const reply = await call({
+      const answer = await call({
         kind: 'judge',
+        model,
         instructions: SYSTEM_PROMPT,
         prompt: userPrompt(state, questions, Boolean(image)),
         image,
       });
-      if (reply.error) throw new Error(`Apple FM: ${reply.error}`);
-      return parseAnswers(reply, questions);
+      if (answer.quota) {
+        status = null;
+        throw new Unavailable(`${label}: quota limit reached`);
+      }
+      if (answer.error) throw new Error(`${label}: ${answer.error}`);
+      return parseAnswers(answer, questions);
     },
   };
 }
