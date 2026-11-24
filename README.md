@@ -38,6 +38,13 @@ The settings let you pick which Apple model the helper runs:
   the helper in an `.app` bundle.
   Then point the `path` in the host manifest at the signed binary.
 
+## X's two web UIs
+
+X is rolling out a new web UI account by account. lentochist reads both. The
+new one has not been tested live: if your account has it and tweets are not
+being hidden, check the console for a "[lentochist] New X UI" warning and
+open an issue.
+
 ## Ad removal
 
 A toggle at the top of the settings, on by default. Tweets and "Who to

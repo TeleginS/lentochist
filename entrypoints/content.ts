@@ -1,17 +1,7 @@
-import { AD_STYLES, applyAdRemoval, isRwebAdTweet } from '@/lib/ads';
+import { AD_STYLES, applyAdRemoval } from '@/lib/ads';
 import { judge } from '@/lib/ai/messages';
 import { decide, MEDIA_QUESTIONS, topicQuestions, type AiFilter, type Question, type TweetState } from '@/lib/ai/questions';
-import {
-  focalTweetId,
-  fullText,
-  isFilteredPage,
-  mainText,
-  quotedText,
-  tweetAuthor,
-  tweetId,
-  tweetMedia,
-  TWEET_SELECTOR,
-} from '@/lib/feed';
+import { findTweets, focalTweetId, fullText, isFilteredPage, type FeedTweet } from '@/lib/feed';
 import { parseKeywords, checkKeywords, type Keyword } from '@/lib/keywords';
 import { checkLanguage, detectLanguage } from '@/lib/languages';
 import { loadSettings, onSettingsChanged, parseTopics, type Settings } from '@/lib/settings';
@@ -36,19 +26,19 @@ export default defineContentScript({
     style.textContent = STUB_STYLES + AD_STYLES;
     document.head.append(style);
 
-    async function localVerdict(article: HTMLElement): Promise<HideReason | null> {
-      const keywordHit = settings.keywords.enabled ? checkKeywords(fullText(article), keywords) : null;
+    async function localVerdict(tweet: FeedTweet): Promise<HideReason | null> {
+      const keywordHit = settings.keywords.enabled ? checkKeywords(fullText(tweet), keywords) : null;
       // Language goes first in the stub, but it needs an async detection, so
       // keywords are computed up front and only used if language passes.
       if (settings.languages.enabled) {
-        const language = checkLanguage(await detectLanguage(mainText(article)), settings.languages);
+        const language = checkLanguage(await detectLanguage(tweet.mainText()), settings.languages);
         if (language) return language;
       }
       return keywordHit;
     }
 
-    async function process(article: HTMLElement): Promise<void> {
-      const id = tweetId(article);
+    async function process(tweet: FeedTweet): Promise<void> {
+      const { element: article, id } = tweet;
       const key = `${generation}:${id ?? ''}`;
       if (article.dataset.lentochist === key) return;
       article.dataset.lentochist = key;
@@ -57,7 +47,7 @@ export default defineContentScript({
 
       if (!id || shown.has(id) || id === focalTweetId(location.pathname)) return;
       // Ad removal handles ads; never spend filters or AI calls on them.
-      if (settings.ads.remove && isRwebAdTweet(article)) return;
+      if (settings.ads.remove && tweet.isAd()) return;
 
       // X may reuse this element for another tweet while we wait.
       const current = () => article.dataset.lentochist === key;
@@ -68,17 +58,17 @@ export default defineContentScript({
         hide(article, reason, () => shown.add(id));
       };
 
-      const local = await localVerdict(article);
+      const local = await localVerdict(tweet);
       if (local) return hideOnce(local);
       if (!current()) return;
 
       // AI filters run only when local filters let the tweet through. The tweet
       // stays visible while they think; topics and media are independent.
-      const media = tweetMedia(article);
+      const media = tweet.media();
       const state: TweetState = {
-        author: tweetAuthor(article),
-        text: mainText(article),
-        quoted: quotedText(article) || undefined,
+        author: tweet.author(),
+        text: tweet.mainText(),
+        quoted: tweet.quotedText() || undefined,
         media: media.kinds,
       };
       const askAi = async (filter: AiFilter, questions: Question[], threshold: number, previewUrl: string | null) => {
@@ -112,9 +102,7 @@ export default defineContentScript({
       // Ads go everywhere X shows tweets, profiles included; filters only on filtered pages.
       applyAdRemoval(document, settings.ads.remove);
       if (!isFilteredPage(location.pathname)) return;
-      for (const article of document.querySelectorAll<HTMLElement>(TWEET_SELECTOR)) {
-        void process(article);
-      }
+      for (const tweet of findTweets(document)) void process(tweet);
     }
 
     let scheduled = false;

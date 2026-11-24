@@ -34,8 +34,10 @@ change done.
 - `entrypoints/background.ts`: service worker. Answers `judge` messages
   through the provider chain.
 - `entrypoints/options/`: the settings page, sections 01–05.
-- `lib/feed.ts`: **every X DOM selector lives here.** When X changes its
-  markup, fix it here and nowhere else.
+- `lib/feed/`: **every X DOM selector for tweets lives here.**
+  - `index.ts` defines `FeedTweet`, the only thing the rest of the code sees.
+  - `rweb.ts` and `xweb.ts` read the two X UIs.
+  - When X changes its markup, fix it here and nowhere else.
 - `lib/languages.ts`, `lib/keywords.ts`: local filters. Keywords use
   Snowball stemming for ru and en; a `/regex/` line is used as written.
 - `lib/ads.ts`: ad removal. It toggles classes only and never removes nodes,
@@ -64,8 +66,24 @@ one ("rweb").
   `[id^="urt:"] > ul > li[data-index]`, and tweets are
   `[data-href="/user/status/ID"] > article`.
 
-**The filters in `lib/feed.ts` support only the old UI.** Ad removal
-supports both. Collapse new-UI rows to 1px, never `display:none` or zero
+Both UIs are supported by the filters (`lib/feed/rweb.ts`, `lib/feed/xweb.ts`)
+and by ad removal (`lib/ads.ts`).
+
+**The new UI has not been seen live.**
+- Its tweet text is read from the innermost `[lang]` element outside the
+  quote frame. That is inferred from Control Panel for Twitter's CSS, not
+  confirmed on a real page.
+- The display name is unknown, so the author is the `@handle`.
+- GIF vs video uses the old UI's poster rule.
+- If the text guess is wrong, filters see empty text and hide nothing, and
+  the console warns once: "New X UI: found tweets but no tweet text".
+- When someone with the new UI can share a markup sample, verify these
+  first.
+
+In the new UI the stub replaces the `article` inside `[data-href]`, and X is
+left to re-measure the row height itself. If gaps show up, Control Panel for
+Twitter calls `virtualizer.resizeItem` through React's fiber. We
+deliberately do not, yet. Collapse new-UI rows to 1px, never `display:none` or zero
 height, or X's virtual list breaks. Control Panel for Twitter
 (github.com/insin/control-panel-for-twitter) is the best reference for both UIs.
 
