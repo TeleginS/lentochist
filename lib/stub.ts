@@ -37,7 +37,8 @@ export const STUB_STYLES = `
 `;
 
 export function stubText(reason: HideReason): string {
-  return `Tweet hidden — ${reason.filter}: ${reason.reason}`;
+  const via = reason.provider ? ` · ${reason.provider}` : '';
+  return `Tweet hidden — ${reason.filter}: ${reason.reason}${via}`;
 }
 
 /** Replaces the tweet with a one-line stub. `onShow` runs when the reader reopens it. */

@@ -3,8 +3,8 @@
 Chrome extension that cleans up the X/Twitter feed. Hidden tweets collapse
 into a one-line stub ("Tweet hidden — topic: …") with a **Show** button.
 
-Status: stage 1 works: the Languages and Keywords filters. The Topics and
-Media AI filters come in stage 2.
+Status: all four filters are built. The AI filters have only been tested with
+mocked providers and the Apple FM helper on its own, not yet on the live feed.
 
 ## Install
 
@@ -16,6 +16,12 @@ npm run build
 Open `chrome://extensions`, turn on Developer mode, click **Load unpacked**
 and pick `.output/chrome-mv3`. Click the toolbar icon to open the settings.
 `npm run dev` starts a browser with live reload. `npm test` runs the tests.
+
+For the AI filters, enter keys under **05 Providers** on the settings page.
+For a free local model on macOS 26+ with Apple Intelligence, run
+`native/install.sh` once: it builds the Apple Foundation Models helper and
+registers it with Chrome (`native/uninstall.sh` removes it). Without it,
+Gemini Nano built into Chrome is used if the device supports it.
 
 ## Filters
 

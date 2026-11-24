@@ -62,6 +62,87 @@
         </p>
         <p class="error" id="keywords-errors" hidden></p>
       </section>
+
+      <section class="card" id="topics">
+        <div class="card__head">
+          <h2><span class="num">03</span> Topics · AI</h2>
+          <label class="switch"><input type="checkbox" name="enabled" /><span></span></label>
+        </div>
+
+        <h3>Unwanted topics</h3>
+        <textarea name="list" rows="7" placeholder="crypto giveaways&#10;AI hype and clickbait without specifics&#10;pseudo-wisdom quotes"></textarea>
+        <p class="muted" id="topics-count"></p>
+
+        <div class="row">
+          <h3>Block threshold</h3>
+          <span class="value" id="topics-threshold-value"></span>
+        </div>
+        <input type="range" name="threshold" min="0.5" max="0.99" step="0.01" />
+        <p class="muted">The tweet text goes to the providers below, in their order.</p>
+      </section>
+
+      <section class="card" id="media">
+        <div class="card__head">
+          <h2><span class="num">04</span> Tweets with media · AI</h2>
+          <label class="switch"><input type="checkbox" name="enabled" /><span></span></label>
+        </div>
+
+        <p class="muted">
+          A separate strict check for photo, video and GIF tweets: 18+ promo (Boosty, OnlyFans),
+          scams and useless viral content. Works independently of the topic list.
+        </p>
+
+        <div class="row">
+          <h3>Block threshold</h3>
+          <span class="value" id="media-threshold-value"></span>
+        </div>
+        <input type="range" name="threshold" min="0.5" max="0.99" step="0.01" />
+        <p class="muted">The lower the threshold, the stricter: at 50% anything that looks even a bit like junk is hidden.</p>
+
+        <label class="check">
+          <input type="checkbox" name="sendPreview" />
+          <span>
+            <b>Show the model a preview of the media</b>
+            <small>
+              Without it the model sees only the text and a note that there is a photo or video, so
+              captions like "body check" slip through. With it the extension downloads a reduced
+              photo or video frame from pbs.twimg.com and sends it along with the text: about +40%
+              cost per media tweet on paid providers.
+            </small>
+          </span>
+        </label>
+      </section>
+
+      <section class="card" id="providers">
+        <div class="card__head">
+          <h2><span class="num">05</span> Providers</h2>
+        </div>
+        <p class="muted">
+          AI checks try providers top to bottom and fall through when one is missing, out of quota
+          or fails. Local models are free but state their own confidence, so thresholds are rougher
+          than with JEV, whose probabilities are calibrated. The stub names the provider that hid a tweet.
+        </p>
+        <ol class="providers" id="providers-list"></ol>
+
+        <template id="provider-local">
+          <p class="status" data-status="fm"></p>
+          <p class="status" data-status="nano"></p>
+          <button type="button" class="button" data-action="download-nano" hidden>Download Gemini Nano</button>
+          <p class="muted">
+            Apple FM needs the helper from <code>native/</code>: run <code>native/install.sh</code> once.
+            Without it Gemini Nano built into Chrome is used.
+          </p>
+        </template>
+        <template id="provider-cloudflare">
+          <label class="field"><span>Account ID</span><input type="text" data-key="cloudflareAccountId" autocomplete="off" spellcheck="false" /></label>
+          <label class="field"><span>API token</span><input type="password" data-key="cloudflareToken" autocomplete="off" /></label>
+          <p class="muted">Workers AI, free 10,000 neurons a day. The token needs Workers AI Read and Edit.</p>
+        </template>
+        <template id="provider-jev">
+          <label class="field"><span>API key</span><input type="password" data-key="jevApiKey" autocomplete="off" /></label>
+          <p class="muted">TypeSafe JEV: calibrated probabilities, paid per token.</p>
+        </template>
+      </section>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

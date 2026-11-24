@@ -16,9 +16,50 @@ export interface KeywordsSettings {
   list: string;
 }
 
+export interface TopicsSettings {
+  enabled: boolean;
+  /** Unwanted topics, one per line, at most MAX_TOPICS. */
+  list: string;
+  /** 0..1. How sure the model must be that a tweet is about a topic. */
+  threshold: number;
+}
+
+export interface MediaSettings {
+  enabled: boolean;
+  threshold: number;
+  /** Send a downscaled photo or video frame to the model along with the text. */
+  sendPreview: boolean;
+}
+
+export type ProviderId = 'local' | 'cloudflare' | 'jev';
+
+export interface ProvidersSettings {
+  /** The provider chain: tried in this order, disabled ones skipped. */
+  order: ProviderId[];
+  enabled: Record<ProviderId, boolean>;
+}
+
 export interface Settings {
   languages: LanguagesSettings;
   keywords: KeywordsSettings;
+  topics: TopicsSettings;
+  media: MediaSettings;
+  providers: ProvidersSettings;
+}
+
+export const MAX_TOPICS = 30;
+
+export function parseTopics(list: string): string[] {
+  const seen = new Set<string>();
+  const topics: string[] = [];
+  for (const raw of list.split('\n')) {
+    const topic = raw.trim();
+    if (!topic || seen.has(topic.toLowerCase())) continue;
+    seen.add(topic.toLowerCase());
+    topics.push(topic);
+    if (topics.length === MAX_TOPICS) break;
+  }
+  return topics;
 }
 
 export const LANGUAGE_CHOICES = [
@@ -38,6 +79,20 @@ export const DEFAULT_SETTINGS: Settings = {
     enabled: false,
     list: '',
   },
+  topics: {
+    enabled: false,
+    list: '',
+    threshold: 0.8,
+  },
+  media: {
+    enabled: false,
+    threshold: 0.85,
+    sendPreview: true,
+  },
+  providers: {
+    order: ['local', 'cloudflare', 'jev'],
+    enabled: { local: true, cloudflare: true, jev: true },
+  },
 };
 
 const STORAGE_KEY = 'settings';
@@ -46,6 +101,12 @@ export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
   return {
     languages: { ...DEFAULT_SETTINGS.languages, ...stored?.languages },
     keywords: { ...DEFAULT_SETTINGS.keywords, ...stored?.keywords },
+    topics: { ...DEFAULT_SETTINGS.topics, ...stored?.topics },
+    media: { ...DEFAULT_SETTINGS.media, ...stored?.media },
+    providers: {
+      order: stored?.providers?.order ?? DEFAULT_SETTINGS.providers.order,
+      enabled: { ...DEFAULT_SETTINGS.providers.enabled, ...stored?.providers?.enabled },
+    },
   };
 }
 
@@ -64,4 +125,27 @@ export function onSettingsChanged(callback: (settings: Settings) => void): void 
       callback(mergeSettings(changes[STORAGE_KEY].newValue as Partial<Settings>));
     }
   });
+}
+
+/** Provider credentials, stored apart from settings so content scripts never need them. */
+export interface ProviderKeys {
+  cloudflareAccountId: string;
+  cloudflareToken: string;
+  jevApiKey: string;
+}
+
+const KEYS_KEY = 'providerKeys';
+
+export async function loadKeys(): Promise<ProviderKeys> {
+  const result = await browser.storage.local.get(KEYS_KEY);
+  return {
+    cloudflareAccountId: '',
+    cloudflareToken: '',
+    jevApiKey: '',
+    ...(result[KEYS_KEY] as Partial<ProviderKeys> | undefined),
+  };
+}
+
+export async function saveKeys(keys: ProviderKeys): Promise<void> {
+  await browser.storage.local.set({ [KEYS_KEY]: keys });
 }

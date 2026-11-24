@@ -47,7 +47,26 @@ Nano.
 The ordered list of providers an AI filter tries until one answers.
 _Avoid_: fallback list
 
+**Statement**:
+One yes-or-no claim about a tweet that an AI filter asks a provider about,
+such as "the tweet is about football" or "the tweet is a scam".
+_Avoid_: prompt, question (on its own), label
+
+**Judgment**:
+The probability per statement that one provider gave for one tweet.
+_Avoid_: verdict, score, result
+
+**Helper**:
+The small local program that lets the extension reach Apple FM, which Chrome
+cannot call directly.
+_Avoid_: native host, bridge, daemon
+
 ## Feed
+
+**Preview**:
+A downscaled photo or video frame of a tweet that the Media filter can show a
+provider along with the text.
+_Avoid_: thumbnail
 
 **Stub**:
 The one-line placeholder that replaces a hidden tweet and names the filter
