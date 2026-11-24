@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>lentochist settings</title>
+    <meta name="manifest.open_in_tab" content="true" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>lentochist</h1>
+        <p class="muted">Hidden tweets collapse into a one-line stub with a Show button. Changes save instantly.</p>
+      </header>
+
+      <section class="card" id="languages">
+        <div class="card__head">
+          <h2><span class="num">01</span> Languages</h2>
+          <label class="switch"><input type="checkbox" name="enabled" /><span></span></label>
+        </div>
+
+        <h3>What to do with the selected languages?</h3>
+        <div class="modes">
+          <label class="mode">
+            <input type="radio" name="mode" value="hide" />
+            <span><b>Hide selected</b><small>Tweets in the languages ticked below disappear from the feed.</small></span>
+          </label>
+          <label class="mode">
+            <input type="radio" name="mode" value="keep" />
+            <span><b>Keep only selected</b><small>Tweets in all other languages are hidden.</small></span>
+          </label>
+        </div>
+
+        <div class="row">
+          <h3 id="languages-question"></h3>
+          <span class="muted" id="languages-count"></span>
+        </div>
+        <div class="langs" id="languages-grid"></div>
+        <p class="summary" id="languages-summary"></p>
+
+        <div class="row">
+          <h3>Minimum confidence</h3>
+          <span class="value" id="confidence-value"></span>
+        </div>
+        <input type="range" name="minConfidence" min="0.5" max="0.99" step="0.01" />
+        <p class="muted">Short and ambiguous tweets stay visible.</p>
+      </section>
+
+      <section class="card" id="keywords">
+        <div class="card__head">
+          <h2><span class="num">02</span> Keywords</h2>
+          <label class="switch"><input type="checkbox" name="enabled" /><span></span></label>
+        </div>
+
+        <h3>Hide tweets containing</h3>
+        <textarea name="list" rows="8" spellcheck="false" placeholder="crypto&#10;розыгрыш&#10;/\bnft\w*/i"></textarea>
+        <p class="muted">
+          One per line. A plain word also matches its other forms in Russian and English:
+          <code>кот</code> catches <code>кота</code> and <code>котами</code>. Wrap a line in slashes
+          for a regular expression: <code>/\bnft\w*/i</code>.
+        </p>
+        <p class="error" id="keywords-errors" hidden></p>
+      </section>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

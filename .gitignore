@@ -1,1 +1,5 @@
-docs/
+docs/screenshots/
+node_modules/
+.output/
+.wxt/
+.idea/workspace.xml
