@@ -6,8 +6,8 @@ collapses each one into a stub the reader can reopen.
 ## Filtering
 
 **Filter**:
-One independently switchable rule that can hide a tweet: Languages,
-Keywords, Topics or Media.
+One independently switchable rule that can hide a tweet behind a stub:
+Languages, Keywords, Topics or Media. Ad removal is not a filter.
 _Avoid_: rule, check (on its own), module
 
 **Local filter**:
@@ -60,6 +60,16 @@ _Avoid_: verdict, score, result
 The small local program that lets the extension reach Apple FM, which Chrome
 cannot call directly.
 _Avoid_: native host, bridge, daemon
+
+## Ads
+
+**Ad**:
+A tweet or account that X itself marks as advertising.
+_Avoid_: promoted tweet, sponsored post, promo
+
+**Ad removal**:
+Taking ads out of the feed entirely, with no stub, wherever X shows tweets.
+_Avoid_: ad filter, ad blocking
 
 ## Feed
 

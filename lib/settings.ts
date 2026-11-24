@@ -48,7 +48,13 @@ export interface ProvidersSettings {
   appleModel: AppleModel;
 }
 
+export interface AdsSettings {
+  /** Take ads out of the feed entirely, with no stub. */
+  remove: boolean;
+}
+
 export interface Settings {
+  ads: AdsSettings;
   languages: LanguagesSettings;
   keywords: KeywordsSettings;
   topics: TopicsSettings;
@@ -78,6 +84,9 @@ export const LANGUAGE_CHOICES = [
 ] as const;
 
 export const DEFAULT_SETTINGS: Settings = {
+  ads: {
+    remove: true,
+  },
   languages: {
     enabled: false,
     mode: 'keep',
@@ -110,6 +119,7 @@ const STORAGE_KEY = 'settings';
 
 export function mergeSettings(stored: Partial<Settings> | undefined): Settings {
   return {
+    ads: { ...DEFAULT_SETTINGS.ads, ...stored?.ads },
     languages: { ...DEFAULT_SETTINGS.languages, ...stored?.languages },
     keywords: { ...DEFAULT_SETTINGS.keywords, ...stored?.keywords },
     topics: { ...DEFAULT_SETTINGS.topics, ...stored?.topics },

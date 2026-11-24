@@ -1,3 +1,4 @@
+import { AD_STYLES, applyAdRemoval, isRwebAdTweet } from '@/lib/ads';
 import { judge } from '@/lib/ai/messages';
 import { decide, MEDIA_QUESTIONS, topicQuestions, type AiFilter, type Question, type TweetState } from '@/lib/ai/questions';
 import {
@@ -32,7 +33,7 @@ export default defineContentScript({
     const shown = new Set<string>();
 
     const style = document.createElement('style');
-    style.textContent = STUB_STYLES;
+    style.textContent = STUB_STYLES + AD_STYLES;
     document.head.append(style);
 
     async function localVerdict(article: HTMLElement): Promise<HideReason | null> {
@@ -55,6 +56,8 @@ export default defineContentScript({
       reveal(article);
 
       if (!id || shown.has(id) || id === focalTweetId(location.pathname)) return;
+      // Ad removal handles ads; never spend filters or AI calls on them.
+      if (settings.ads.remove && isRwebAdTweet(article)) return;
 
       // X may reuse this element for another tweet while we wait.
       const current = () => article.dataset.lentochist === key;
@@ -106,6 +109,8 @@ export default defineContentScript({
         revealAll();
       }
       forgetDetached();
+      // Ads go everywhere X shows tweets, profiles included; filters only on filtered pages.
+      applyAdRemoval(document, settings.ads.remove);
       if (!isFilteredPage(location.pathname)) return;
       for (const article of document.querySelectorAll<HTMLElement>(TWEET_SELECTOR)) {
         void process(article);

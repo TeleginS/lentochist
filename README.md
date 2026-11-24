@@ -38,6 +38,14 @@ The settings let you pick which Apple model the helper runs:
   the helper in an `.app` bundle.
   Then point the `path` in the host manifest at the signed binary.
 
+## Ad removal
+
+A toggle at the top of the settings, on by default. Tweets and "Who to
+follow" accounts that X itself marks as ads leave the feed entirely, with no
+stub, wherever X shows tweets, profiles included. Ads are removed before any
+filter runs, so they never cost an AI call. Unmarked advertising, such as
+creator integrations, is left to the Topics and Media filters.
+
 ## Filters
 
 1. **Languages.** Pick languages from a list, then either hide them or keep

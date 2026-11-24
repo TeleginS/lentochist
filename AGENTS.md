@@ -38,6 +38,8 @@ change done.
   markup, fix it here and nowhere else.
 - `lib/languages.ts`, `lib/keywords.ts`: local filters. Keywords use
   Snowball stemming for ru and en; a `/regex/` line is used as written.
+- `lib/ads.ts`: ad removal. It toggles classes only and never removes nodes,
+  because X virtualizes and reuses timeline rows.
 - `lib/stub.ts`: the stub. Its text is "Tweet hidden — {filter}: {reason} · {provider}".
 - `lib/settings.ts`: settings and defaults. Provider keys are stored apart
   from settings (`providerKeys`), so content scripts never read them.
@@ -51,6 +53,21 @@ change done.
 - `lib/ai/image.ts`: media preview, downscaled to fit JEV's 280–1568 px limit.
 - `native/`: the Native Messaging helper for Apple Foundation Models.
 - `tests/`: vitest with WXT's `fakeBrowser`. Mock `fetch` for providers.
+
+## X has two web UIs
+
+X is rolling out a new web UI ("xweb") account by account, next to the old
+one ("rweb").
+- The old UI uses `data-testid`: `article[data-testid="tweet"]`,
+  `tweetText`, `User-Name`, `cellInnerDiv`, `placementTracking`.
+- The new one has no test ids. Timeline rows are
+  `[id^="urt:"] > ul > li[data-index]`, and tweets are
+  `[data-href="/user/status/ID"] > article`.
+
+**The filters in `lib/feed.ts` support only the old UI.** Ad removal
+supports both. Collapse new-UI rows to 1px, never `display:none` or zero
+height, or X's virtual list breaks. Control Panel for Twitter
+(github.com/insin/control-panel-for-twitter) is the best reference for both UIs.
 
 ## Rules that are easy to break
 

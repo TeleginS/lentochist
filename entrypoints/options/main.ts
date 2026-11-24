@@ -32,6 +32,14 @@ function $(selector: string): HTMLElement {
   return el;
 }
 
+// --- Ads ---
+
+const removeAds = document.querySelector<HTMLInputElement>('[name=removeAds]')!;
+removeAds.addEventListener('change', () => {
+  settings.ads.remove = removeAds.checked;
+  save();
+});
+
 // --- 01 Languages ---
 
 const langs = $('#languages');
@@ -268,6 +276,7 @@ void refreshLocalStatus();
 // --- Render ---
 
 function render(): void {
+  removeAds.checked = settings.ads.remove;
   const l = settings.languages;
   langEnabled.checked = l.enabled;
   langs.classList.toggle('off', !l.enabled);
